@@ -1,4 +1,4 @@
-# Structurally Contrained Recurrent Network (SCRN) Model
+# Structurally Constrained Recurrent Network (SCRN) Model
 #
 # This gives an implementation of the SCRN model given in Mikolov et al. 2015, arXiv:1412.7753 [cs.NE], 
 # https://arxiv.org/abs/1412.7753 using Python and Tensorflow.

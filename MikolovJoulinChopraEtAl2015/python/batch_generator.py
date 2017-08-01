@@ -1,4 +1,4 @@
-# Structurally Contrained Recurrent Network (SCRN) Model
+# Structurally Constrained Recurrent Network (SCRN) Model
 #
 # This gives an implementation of the SCRN model given in Mikolov et al. 2015, arXiv:1412.7753 [cs.NE], 
 # https://arxiv.org/abs/1412.7753 using Python and Tensorflow.
@@ -43,14 +43,9 @@ class batch_generator(object):
         self._last_batch = self._next_batch()
         
         #
-        print('     Tower: %d' % tower)
-        print('          Input Text Size: %d' % len(text))
-        print('          Cut Text Size: %d' % self._text_size)
-        print('          Subtext Size: %d' % self._sub_text_size)
-        print('          Dropped Text Size: %d' % self._dropped_text_size)
-        print('          Effective Batch Size: %d' % self._effective_batch_size)
-        print('          Number of Batches: %d' % self._num_batches)
-        
+        self._print_summary(tower, text)
+    
+    #
     def _next_batch(self):
         
         # Generate a batch starting with token at self._first_token_idx
@@ -59,7 +54,18 @@ class batch_generator(object):
             batch[i, self._text[self._offsets[i] + self._token_idx]] = 1.0
         self._token_idx += 1
         return batch
-  
+    
+    #
+    def _print_summary(self, tower, text):
+        print('     Tower: %d' % tower)
+        print('          Input Text Size: %d' % len(text))
+        print('          Cut Text Size: %d' % self._text_size)
+        print('          Subtext Size: %d' % self._sub_text_size)
+        print('          Dropped Text Size: %d' % self._dropped_text_size)
+        print('          Effective Batch Size: %d' % self._effective_batch_size)
+        print('          Number of Batches: %d' % self._num_batches)
+        
+    #
     def next(self):
 
         #
@@ -69,8 +75,10 @@ class batch_generator(object):
         self._last_batch = batches[-1]
         return batches
     
+    #
     def num_batches(self):
         return self._num_batches
     
+    #
     def reset_token_idx(self):
         self._token_idx = 0
