@@ -23,20 +23,25 @@ class srn_graph(base_rnn_graph1):
     
     # SRN cell definition   .
     def _cell(self, x, h):
-        hidden_arg = tf.matmul(x, self._A) + tf.matmul(h, self._R)
-        hidden = tf.sigmoid(hidden_arg)
-        output_arg = tf.matmul(hidden, self._U)
-        output = output_arg
+        with tf.name_scope('Hidden'):
+            hidden_arg = tf.matmul(x, self._A) + tf.matmul(h, self._R)
+            hidden = tf.sigmoid(hidden_arg)
+        with tf.name_scope('Output'):
+            output_arg = tf.matmul(hidden, self._U)
+            output = output_arg
         return output, hidden
     
     # Setup SRN cell parameters
     def _setup_cell_parameters(self):
         
         # Token embedding tensor.
-        self._A = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('A'):
+            self._A = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
 
         # Recurrent weights tensor and bias.
-        self._R = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('R'):
+            self._R = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
 
         # Output update tensor and bias.
-        self._U = tf.Variable(tf.truncated_normal([self._hidden_size, self._vocabulary_size], -0.1, 0.1))
+        with tf.name_scope('U'):
+            self._U = tf.Variable(tf.truncated_normal([self._hidden_size, self._vocabulary_size], -0.1, 0.1))

@@ -1,14 +1,9 @@
-# Structurally Constrained Recurrent Network (SCRN) Model
+# Delta Recurrent Neural Network (Delta-RNN) Framework
 #
-# This gives an implementation of the SCRN model given in Mikolov et al. 2015, arXiv:1412.7753 [cs.NE], 
-# https://arxiv.org/abs/1412.7753 using Python and Tensorflow.
+# This gives an implementation of the Delta-RNN framework given in Ororbia et al. 2017, arXiv:1703.08864 [cs.CL], 
+# https://arxiv.org/abs/1703.08864 using Python and Tensorflow.
 #
-# This model is superceded by the Delta-RNN model given in Ororbia et al. 2017, arXiv:1703.08864 [cs.CL], 
-# https://arxiv.org/abs/1703.08864 implemented in this repository using Python and Tensorflow.
-#
-# This code fails to implement hierarchical softmax at this time as Tensorflow does not appear to include an
-# implementation.  Hierarchical softmax can be included at a future date when hierarchical softmax is available 
-# for Tensorflow.
+# This code implements a variety of RNN models using the Delta-RNN Framework
 #
 # Stuart Hagler, 2017
 

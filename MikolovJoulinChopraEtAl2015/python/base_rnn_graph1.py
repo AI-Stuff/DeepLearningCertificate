@@ -27,17 +27,16 @@ class base_rnn_graph1(base_rnn_graph):
     
     # Graph constructor
     def __init__(self, num_gpus, hidden_size, state_size, vocabulary_size, num_training_unfoldings,
-                 num_validation_unfoldings, batch_size, optimization_frequency, clip_norm, momentum):
+                 num_validation_unfoldings, training_batch_size, validation_batch_size, optimization_frequency):
         
         # Input hyperparameters
-        self._batch_size = batch_size
-        self._clip_norm = clip_norm
         self._hidden_size = hidden_size
-        self._momentum = momentum
         self._num_gpus = num_gpus
         self._num_training_unfoldings = num_training_unfoldings
         self._num_validation_unfoldings = num_validation_unfoldings
         self._optimization_frequency = optimization_frequency
+        self._training_batch_size = training_batch_size
+        self._validation_batch_size = validation_batch_size
         self._vocabulary_size = vocabulary_size
         
         # Derived hyperparameters
@@ -56,9 +55,10 @@ class base_rnn_graph1(base_rnn_graph):
             for _ in range(self._num_towers):
                 training_data_tmp = []
                 for _ in range(num_training_unfoldings + 1):
-                    training_data_tmp.append(tf.placeholder(tf.float32, shape=[self._batch_size, self._vocabulary_size]))
+                    training_data_tmp.append(tf.placeholder(tf.float32, shape=[self._training_batch_size,
+                                                                               self._vocabulary_size]))
                 self._training_data.append(training_data_tmp)
-                self._training_hidden_saved.append(tf.Variable(tf.zeros([self._batch_size, self._hidden_size]),
+                self._training_hidden_saved.append(tf.Variable(tf.zeros([self._training_batch_size, self._hidden_size]),
                                                                trainable=False))
             
             # Validation data
@@ -67,12 +67,16 @@ class base_rnn_graph1(base_rnn_graph):
             for _ in range(self._num_towers):
                 validation_input_tmp = []
                 for _ in range(num_validation_unfoldings):
-                    validation_input_tmp.append(tf.placeholder(tf.float32, shape=[1, self._vocabulary_size]))
+                    validation_input_tmp.append(tf.placeholder(tf.float32, shape=[self._validation_batch_size
+                                                                                  ,self._vocabulary_size]))
                 self._validation_input.append(validation_input_tmp)
-                self._validation_hidden_saved.append(tf.Variable(tf.zeros([1, self._hidden_size]), trainable=False))
+                self._validation_hidden_saved.append(tf.Variable(tf.zeros([self._validation_batch_size, self._hidden_size]),
+                                                                 trainable=False))
                 
             # Optimizer hyperparameters
+            self._clip_norm = tf.placeholder(tf.float32)
             self._learning_rate = tf.placeholder(tf.float32)
+            self._momentum = tf.placeholder(tf.float32)
                 
             # Optimizer
             self._optimizer = tf.train.MomentumOptimizer(self._learning_rate, self._momentum)
@@ -81,7 +85,8 @@ class base_rnn_graph1(base_rnn_graph):
             
             # Reset training state
             self._reset_training_state = \
-                [ tf.group(self._training_hidden_saved[tower].assign(tf.zeros([batch_size, hidden_size]))) \
+                [ tf.group(self._training_hidden_saved[tower].assign(tf.zeros([self._training_batch_size, 
+                                                                               self._hidden_size]))) \
                   for tower in range(self._num_towers) ]
             
             # Train RNN on training data
@@ -107,6 +112,10 @@ class base_rnn_graph1(base_rnn_graph):
                 gradients, variables = zip(*self._optimizer.compute_gradients(self._cost))
                 gradients, _ = tf.clip_by_global_norm(gradients, self._clip_norm)
                 self._optimize = self._optimizer.apply_gradients(zip(gradients, variables))
+
+            # Summarize training performance
+            tf.summary.scalar('cost', self._cost)
+            self._training_summary = tf.summary.merge_all()
                 
             # Initialization:
             
@@ -116,7 +125,8 @@ class base_rnn_graph1(base_rnn_graph):
     
             # Reset validation state
             self._reset_validation_state = \
-                [ tf.group(self._validation_hidden_saved[tower].assign(tf.zeros([1, hidden_size]))) \
+                [ tf.group(self._validation_hidden_saved[tower].assign(tf.zeros([self._validation_batch_size,
+                                                                                 self._hidden_size]))) \
                   for tower in range(self._num_towers) ]
 
             # Run RNN on validation data
@@ -129,3 +139,44 @@ class base_rnn_graph1(base_rnn_graph):
 
             # Validation prediction, replace with hierarchical softmax in the future
             self._validation_prediction = tf.nn.softmax(logits)
+            
+    # Implements a tower to run part of a batch of training data on a GPU
+    def _training_tower(self, i, tower, gpu):
+        
+        with tf.device("/gpu:%d" % gpu):
+   
+            # Get saved training state
+            hidden = self._training_hidden_saved[tower]
+
+            # Run training data through cell
+            labels = []
+            outputs = []
+            for j in range(self._optimization_frequency):
+                x = self._training_data[tower][i*self._optimization_frequency + j]
+                label = self._training_data[tower][i*self._optimization_frequency + j + 1]
+                output, hidden = self._cell(x, hidden)
+                labels.append(label)
+                outputs.append(output)
+
+            # Save training state and return training outputs
+            with tf.control_dependencies([self._training_hidden_saved[tower].assign(hidden)]):
+                return outputs, labels
+        
+    # Implements a tower to run part of a batch of validation data on a GPU
+    def _validation_tower(self, tower, gpu):
+        
+        with tf.device("/gpu:%d" % gpu):
+        
+            # Get saved validation state
+            hidden = self._validation_hidden_saved[tower]
+
+            # Run validation data through cell
+            outputs = []
+            for i in range(self._num_validation_unfoldings):
+                x = self._validation_input[tower][i]
+                output, hidden = self._cell(x, hidden)
+                outputs.append(output)
+
+            # Save validation state and return validation outputs
+            with tf.control_dependencies([self._validation_hidden_saved[tower].assign(hidden)]):
+                return outputs

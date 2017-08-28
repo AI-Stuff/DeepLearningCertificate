@@ -23,15 +23,20 @@ class lstm_graph(base_rnn_graph2):
     
     # LSTM cell definition   .
     def _cell(self, x, h, c):
-        forget_arg = tf.matmul(x, self._Wf) + tf.matmul(h, self._Uf)
-        forget_gate = tf.sigmoid(forget_arg + self._forget_bias)
-        input_arg = tf.matmul(x, self._Wi) + tf.matmul(h, self._Ui)
-        input_gate = tf.sigmoid(input_arg + self._input_bias)
-        output_arg = tf.matmul(x, self._Wo) + tf.matmul(h, self._Uo)
-        output_gate = tf.sigmoid(output_arg + self._output_bias)
-        update_arg = tf.matmul(x, self._Wc) + tf.matmul(h, self._Uc)
-        state = forget_gate * c + input_gate * tf.tanh(update_arg + self._update_bias)
-        output = output_gate * tf.tanh(state)
+        with tf.name_scope('Forget_Gate'):
+            forget_arg = tf.matmul(x, self._Wf) + tf.matmul(h, self._Uf)
+            forget_gate = tf.sigmoid(forget_arg + self._forget_bias)
+        with tf.name_scope('Input_Gate'):
+            input_arg = tf.matmul(x, self._Wi) + tf.matmul(h, self._Ui)
+            input_gate = tf.sigmoid(input_arg + self._input_bias)
+        with tf.name_scope('Output_Gate'):
+            output_arg = tf.matmul(x, self._Wo) + tf.matmul(h, self._Uo)
+            output_gate = tf.sigmoid(output_arg + self._output_bias)
+        with tf.name_scope('State'):
+            update_arg = tf.matmul(x, self._Wc) + tf.matmul(h, self._Uc)
+            state = forget_gate * c + input_gate * tf.tanh(update_arg + self._update_bias)
+        with tf.name_scope('Output'):
+            output = output_gate * tf.tanh(state)
         return output, state
     
     # Setup LSTM cell parameters
@@ -42,25 +47,39 @@ class lstm_graph(base_rnn_graph2):
             print("Hidden size must equal state size")
         
         # Forget gate input and output tensor and bias.
-        self._Wf = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
-        self._Uf = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
-        self._forget_bias = tf.Variable(tf.zeros([1, self._hidden_size]))
+        with tf.name_scope('Wf'):
+            self._Wf = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('Uf'):
+            self._Uf = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('bf'):
+            self._forget_bias = tf.Variable(tf.zeros([1, self._hidden_size]))
 
         # Input gate input and output tensor and bias.
-        self._Wi = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
-        self._Ui = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
-        self._input_bias = tf.Variable(tf.zeros([1, self._hidden_size]))
+        with tf.name_scope('Wi'):
+            self._Wi = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('Ui'):
+            self._Ui = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('bi'):
+            self._input_bias = tf.Variable(tf.zeros([1, self._hidden_size]))
 
         # Output gate input and output tensor and bias.
-        self._Wo = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
-        self._Uo = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
-        self._output_bias = tf.Variable(tf.zeros([1, self._hidden_size]))
+        with tf.name_scope('Wo'):
+            self._Wo = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('Uo'):
+            self._Uo = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('bo'):
+            self._output_bias = tf.Variable(tf.zeros([1, self._hidden_size]))
 
         # Cell state update input and output tensor and bias.
-        self._Wc = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
-        self._Uc = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
-        self._update_bias = tf.Variable(tf.zeros([1, self._hidden_size]))
+        with tf.name_scope('Wc'):
+            self._Wc = tf.Variable(tf.truncated_normal([self._vocabulary_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('Uc'):
+            self._Uc = tf.Variable(tf.truncated_normal([self._hidden_size, self._hidden_size], -0.1, 0.1))
+        with tf.name_scope('bc'):
+            self._update_bias = tf.Variable(tf.zeros([1, self._hidden_size]))
 
         # Softmax weight tensor and bias.
-        self._W = tf.Variable(tf.truncated_normal([self._hidden_size, self._vocabulary_size], -0.1, 0.1))
-        self._W_bias = tf.Variable(tf.zeros([self._vocabulary_size]))
+        with tf.name_scope('W'):
+            self._W = tf.Variable(tf.truncated_normal([self._hidden_size, self._vocabulary_size], -0.1, 0.1))
+        with tf.name_scope('b'):
+            self._W_bias = tf.Variable(tf.zeros([self._vocabulary_size]))
